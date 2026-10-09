@@ -3,21 +3,8 @@
 import { useState } from 'react';
 import CreateBusinessModal from './create-business-modal';
 import Link from 'next/link';
+import type { Business } from '@/lib/constants';
 
-type Business = {
-    id: string;
-    name: string;
-    matriculeFiscale: string;
-    description?: string;
-    region: string;
-    serviceDomain: string;
-    phone?: string;
-    email?: string;
-    address?: string;
-    website?: string;
-    createdAt: string;
-    role: 'OWNER' | 'ADMIN' | 'MEMBER';
-};
 
 interface BusinessDashboardProps {
     businesses: Business[];

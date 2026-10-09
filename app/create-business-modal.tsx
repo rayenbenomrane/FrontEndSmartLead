@@ -45,7 +45,7 @@ export default function CreateBusinessModal({
 
         try {
             const response = await fetch(
-                '/api/auth/businesses',
+                '/api/proxy/businesses',
                 {
                     method: 'POST',
                     headers: {
@@ -64,7 +64,7 @@ export default function CreateBusinessModal({
                 );
             }
 
-            window.location.reload();
+            window.location.href = `/business/${data.id}`;
 
         } catch (err: any) {
             setError(

@@ -10,6 +10,7 @@ import {
 } from '@/lib/constants';
 import { btnPrimary, btnSecondary, ConfirmDialog, ErrorBox, Field, inputClass, Modal, StatusBadge } from '@/components/ui';
 import ProspectFormModal from '../prospect-form-modal';
+import AiPanel from '@/components/AiPanel';
 
 const toLocalInput = (iso?: string) => {
   const d = iso ? new Date(iso) : new Date();
@@ -43,7 +44,9 @@ function InteractionModal({ base, interaction, onClose, onSaved }: {
   }
 
   return (
+
     <Modal title={interaction ? "Modifier l'interaction" : 'Nouvelle interaction'} onClose={onClose}>
+
       <form onSubmit={submit}>
         <div className="space-y-5 px-7 py-6">
           <div className="grid gap-5 sm:grid-cols-2">
@@ -171,10 +174,11 @@ export default function ProspectDetailPage({ params }: { params: { id: string; p
     [prospect.firstName, prospect.lastName].filter(Boolean).join(' ') ||
     'Sans nom';
   return (
+
     <div className="space-y-6">
       <Link href={`/business/${businessId}/prospects`} className="text-sm font-semibold text-slate-500 hover:text-indigo-600">← Tous les prospects</Link>
       <ErrorBox message={error} />
-
+      <AiPanel prospectId={prospect.id} />
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div className="flex items-center gap-4">

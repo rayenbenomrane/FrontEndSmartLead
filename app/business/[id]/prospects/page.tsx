@@ -1,5 +1,6 @@
 'use client';
-
+import ScoreBadge from '@/components/ScoreBadge'; 
+   
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
@@ -130,6 +131,7 @@ export default function ProspectsPage({ params, searchParams }: { params: { id: 
                   <th className="px-5 py-3 font-semibold">Entreprise</th>
                   <th className="px-5 py-3 font-semibold">Secteur</th>
                   <th className="px-5 py-3 font-semibold">Budget</th>
+                  <th className="px-5 py-3 font-semibold">score</th>
                   <th className="px-5 py-3 font-semibold">Statut</th>
                   <th className="px-5 py-3 text-right font-semibold">Actions</th>
                 </tr>
@@ -144,6 +146,7 @@ export default function ProspectsPage({ params, searchParams }: { params: { id: 
                     <td className="px-5 py-3.5 text-slate-700">{p.company}</td>
                     <td className="px-5 py-3.5 text-slate-500">{p.region || '—'}</td>
                     <td className="px-5 py-3.5 text-slate-700">{formatMoney(p.estimatedValue)}</td>
+                    <td className="px-5 py-3.5 text-slate-700"><ScoreBadge score={p.score} /></td>
                     <td className="px-5 py-3.5">
                       <select value={p.status} onChange={(e) => changeStatus(p, e.target.value as ProspectStatus)} aria-label="Changer le statut"
                         className={`cursor-pointer rounded-full border-0 py-1 pl-2.5 pr-7 text-xs font-semibold ring-1 ring-inset focus:ring-2 ${STATUS_CONFIG[p.status].badge}`}>
@@ -183,6 +186,7 @@ export default function ProspectsPage({ params, searchParams }: { params: { id: 
         <ConfirmDialog title="Supprimer ce prospect ?" loading={deleting} error={deleteError} onConfirm={confirmDelete} onClose={() => setToDelete(null)}
           message={<>Le prospect <strong>{toDelete.company}</strong> ({toDelete.company}) et toutes ses interactions seront définitivement supprimés.</>} />
       )}
+     
     </div>
   );
 }

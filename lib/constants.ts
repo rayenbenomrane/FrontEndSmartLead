@@ -1,10 +1,11 @@
 export type BusinessRole = 'OWNER' | 'ADMIN' | 'MEMBER';
-export type ProspectStatus = 'NEW' | 'CONTACTED' | 'NEGOTIATION' | 'PROPOSAL_SENT' | 'WON' | 'LOST';
+export type ProspectStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'NEGOTIATION' | 'PROPOSAL_SENT' | 'WON' | 'LOST';
 export type InteractionType = 'EMAIL' | 'REUNION' | 'NOTE';
 
 export const STATUS_CONFIG: Record<ProspectStatus, { label: string; badge: string; dot: string }> = {
   NEW: { label: 'Nouveau', badge: 'bg-slate-100 text-slate-700 ring-slate-500/10', dot: 'bg-slate-400' },
   CONTACTED: { label: 'Contacté', badge: 'bg-sky-50 text-sky-700 ring-sky-600/10', dot: 'bg-sky-500' },
+  QUALIFIED: { label: 'Qualifié', badge: 'bg-indigo-50 text-indigo-700 ring-indigo-600/10', dot: 'bg-indigo-500' },
   NEGOTIATION: { label: 'En négociation', badge: 'bg-amber-50 text-amber-700 ring-amber-600/20', dot: 'bg-amber-500' },
   PROPOSAL_SENT: { label: 'Proposition envoyée', badge: 'bg-violet-50 text-violet-700 ring-violet-600/10', dot: 'bg-violet-500' },
   WON: { label: 'Gagné', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', dot: 'bg-emerald-500' },
@@ -38,6 +39,7 @@ export type Prospect = {
   website: string | null;
   source: string;
   estimatedValue: number | null;
+  score: number | null;
   status: ProspectStatus;
   notes: string | null;
   createdAt: string;

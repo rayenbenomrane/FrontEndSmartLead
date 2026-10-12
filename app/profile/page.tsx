@@ -1,59 +1,48 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { api, json } from '../../lib/api';
 
-const input = 'w-full rounded-md border border-slate-300 px-3 py-2 text-sm';
-const card = 'rounded-lg border border-slate-200 bg-white p-5 space-y-3';
+import { FormEvent, useEffect, useState } from 'react';
+import { usersApi } from '@/lib/api';
+
+const input = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none';
+const btn = 'rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50';
 
 export default function ProfilePage() {
-  const [me, setMe] = useState<any>(null);
   const [form, setForm] = useState({ name: '', email: '' });
+  const [role, setRole] = useState('');
   const [pw, setPw] = useState({ currentPassword: '', newPassword: '' });
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api('users/me').then((u) => {
-      const user = u.user ?? u; // tolerate { user } or flat response
-      setMe(user);
-      setForm({ name: user.name ?? '', email: user.email ?? '' });
-    }).catch((e) => setMsg({ kind: 'err', text: e.message }));
+    usersApi.me().then((u) => { setForm({ name: u.name, email: u.email }); setRole(u.role); })
+      .catch((e) => setMsg({ kind: 'err', text: e.message }));
   }, []);
 
-  async function saveProfile(e: React.FormEvent) {
-    e.preventDefault();
-    try { setMe(await api('users/me', json('PATCH', form))); setMsg({ kind: 'ok', text: 'Profil mis à jour.' }); }
-    catch (err: any) { setMsg({ kind: 'err', text: err.message }); }
+  async function submit(e: FormEvent, fn: () => Promise<unknown>, okText: string, after?: () => void) {
+    e.preventDefault(); setBusy(true); setMsg(null);
+    try { await fn(); setMsg({ kind: 'ok', text: okText }); after?.(); }
+    catch (err) { setMsg({ kind: 'err', text: (err as Error).message }); }
+    setBusy(false);
   }
-
-  async function savePassword(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      await api('users/me/password', json('PATCH', pw));
-      setPw({ currentPassword: '', newPassword: '' });
-      setMsg({ kind: 'ok', text: 'Mot de passe modifié.' });
-    } catch (err: any) { setMsg({ kind: 'err', text: err.message }); }
-  }
-
-  if (!me) return <p className="text-slate-400">Chargement…</p>;
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
-      <h1 className="text-xl font-semibold">Mon profil</h1>
-      {msg && <p className={`rounded-md p-3 text-sm ${msg.kind === 'ok' ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'}`}>{msg.text}</p>}
+    <main className="mx-auto max-w-xl space-y-8 p-6">
+      <h1 className="text-2xl font-bold">Mon profil</h1>
+      {msg && <p className={`rounded-lg p-3 text-sm ${msg.kind === 'ok' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{msg.text}</p>}
 
-      <form onSubmit={saveProfile} className={card}>
-        <label className="block text-sm">Nom<input required className={input} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-        <label className="block text-sm">Email<input required type="email" className={input} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-        <p className="text-sm text-slate-500">Rôle : {me.role} · Statut : {me.status ?? 'ACTIVE'}</p>
-        <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">Enregistrer</button>
+      <form onSubmit={(e) => submit(e, () => usersApi.updateMe(form), 'Profil mis à jour')} className="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <label className="block text-sm">Nom<input className={input} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required minLength={2} /></label>
+        <label className="block text-sm">Email<input type="email" className={input} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></label>
+        <p className="text-xs text-gray-500">Rôle : {role}</p>
+        <button className={btn} disabled={busy}>Enregistrer</button>
       </form>
 
-      <form onSubmit={savePassword} className={card}>
-        <h2 className="font-medium">Changer le mot de passe</h2>
-        <label className="block text-sm">Mot de passe actuel<input required type="password" className={input} value={pw.currentPassword} onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })} /></label>
-        <label className="block text-sm">Nouveau mot de passe (8 caractères min.)<input required minLength={8} type="password" className={input} value={pw.newPassword} onChange={(e) => setPw({ ...pw, newPassword: e.target.value })} /></label>
-        <button className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">Modifier le mot de passe</button>
+      <form onSubmit={(e) => submit(e, () => usersApi.changePassword(pw), 'Mot de passe modifié', () => setPw({ currentPassword: '', newPassword: '' }))} className="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <h2 className="font-semibold">Changer le mot de passe</h2>
+        <input type="password" placeholder="Mot de passe actuel" className={input} value={pw.currentPassword} onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })} required />
+        <input type="password" placeholder="Nouveau mot de passe (8 caractères min.)" className={input} value={pw.newPassword} onChange={(e) => setPw({ ...pw, newPassword: e.target.value })} required minLength={8} />
+        <button className={btn} disabled={busy}>Modifier</button>
       </form>
-    </div>
+    </main>
   );
 }

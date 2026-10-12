@@ -31,9 +31,9 @@ function InteractionModal({ base, interaction, onClose, onSaved }: {
     setLoading(true);
     setError(null);
     try {
-      const body = { type, description: description.trim(), date: new Date(date).toISOString() };
-      if (interaction) await api(`${base}/${interaction.id}`, { method: 'PATCH', body });
-      else await api(base, { method: 'POST', body });
+      const body = { type: type.toUpperCase(), description: description.trim(), date: new Date(date).toISOString() };
+      if (interaction) await api(`${base}/${interaction.id}`, { method: 'PATCH', body: JSON.stringify(body), });
+      else await api(base, { method: 'POST', body: JSON.stringify(body), });
       onSaved();
     } catch (err: any) {
       setError(err.message);
@@ -103,8 +103,22 @@ export default function ProspectDetailPage({ params }: { params: { id: string; p
 
   async function changeStatus(status: ProspectStatus) {
     try {
-      setProspect(await api<Prospect>(pBase, { method: 'PATCH', body: { status } }));
-    } catch (e: any) { setError(e.message); }
+      setError(null);
+
+      const updated = await api<Prospect>(pBase, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      setProspect(updated);
+    } catch (e: unknown) {
+      setError(
+        e instanceof Error ? e.message : 'Impossible de modifier le statut.',
+      );
+    }
   }
 
   async function removeProspect() {
@@ -145,14 +159,17 @@ export default function ProspectDetailPage({ params }: { params: { id: string; p
   if (!prospect) return <p className="text-sm text-slate-500">Chargement...</p>;
 
   const info: [string, string][] = [
-    ['Email', prospect.email],
+    ['Email', prospect.email!],
     ['Téléphone', prospect.phone || '—'],
-    ['Secteur', prospect.sector || '—'],
+    ['Secteur', prospect.region || '—'],
     ['Source', prospect.source || '—'],
-    ['Budget estimé', formatMoney(prospect.estimatedBudget)],
+    ['Budget estimé', formatMoney(prospect.estimatedValue)],
     ['Créé le', formatDate(prospect.createdAt)],
   ];
-
+  const firstName =
+    prospect.company ||
+    [prospect.firstName, prospect.lastName].filter(Boolean).join(' ') ||
+    'Sans nom';
   return (
     <div className="space-y-6">
       <Link href={`/business/${businessId}/prospects`} className="text-sm font-semibold text-slate-500 hover:text-indigo-600">← Tous les prospects</Link>
@@ -162,11 +179,11 @@ export default function ProspectDetailPage({ params }: { params: { id: string; p
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-xl font-bold text-indigo-600">
-              {prospect.contactName.charAt(0).toUpperCase()}
+              {prospect.firstName.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">{prospect.contactName}</h2>
-              <p className="text-sm text-slate-500">{prospect.companyName}</p>
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900">{prospect.firstName}</h2>
+              <p className="text-sm text-slate-500">{prospect.firstName}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -230,7 +247,7 @@ export default function ProspectDetailPage({ params }: { params: { id: string; p
       {iForm && <InteractionModal base={iBase} interaction={iForm === 'new' ? undefined : iForm} onClose={() => setIForm(null)} onSaved={() => { setIForm(null); load(); }} />}
       {deleting && (
         <ConfirmDialog title="Supprimer ce prospect ?" loading={deleteBusy} error={deleteError} onConfirm={removeProspect} onClose={() => setDeleting(false)}
-          message={<>Le prospect <strong>{prospect.contactName}</strong> et ses {interactions.length} interaction(s) seront définitivement supprimés.</>} />
+          message={<>Le prospect <strong>{prospect.firstName}</strong> et ses {interactions.length} interaction(s) seront définitivement supprimés.</>} />
       )}
       {iDelete && (
         <ConfirmDialog title="Supprimer cette interaction ?" loading={iDeleteBusy} error={iDeleteError} onConfirm={removeInteraction} onClose={() => setIDelete(null)}

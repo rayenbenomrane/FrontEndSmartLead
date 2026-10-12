@@ -1,87 +1,349 @@
+
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { STATUS_CONFIG, STATUSES, type Prospect, type ProspectStatus } from '@/lib/constants';
-import { btnPrimary, btnSecondary, ErrorBox, Field, inputClass, Modal } from '@/components/ui';
+import {
+  type Prospect,
+  type ProspectStatus,
+  STATUSES,
+  STATUS_CONFIG,
+} from '@/lib/constants';
+import {
+  btnPrimary,
+  btnSecondary,
+  ErrorBox,
+  Field,
+  inputClass,
+  Modal,
+} from '@/components/ui';
 
-/** Create (no `prospect`) or edit a prospect. */
-export default function ProspectFormModal({ businessId, prospect, onClose, onSaved }: {
-  businessId: string; prospect?: Prospect; onClose: () => void; onSaved: (p: Prospect) => void;
-}) {
-  const [form, setForm] = useState({
-    contactName: prospect?.contactName ?? '',
-    companyName: prospect?.companyName ?? '',
-    email: prospect?.email ?? '',
-    phone: prospect?.phone ?? '',
-    sector: prospect?.sector ?? '',
-    source: prospect?.source ?? '',
-    estimatedBudget: prospect?.estimatedBudget != null ? String(prospect.estimatedBudget) : '',
-    status: (prospect?.status ?? 'NEW') as ProspectStatus,
-  });
+type ProspectFormModalProps = {
+  businessId: string;
+  prospect?: Prospect;
+  onClose: () => void;
+  onSaved: (prospect: Prospect) => void;
+};
+
+type ProspectFormData = {
+  firstName: string;
+  lastName: string;
+  company: string;
+  email: string;
+  phone: string;
+  jobTitle: string;
+  industry: string;
+  region: string;
+  website: string;
+  source: string;
+  status: ProspectStatus;
+  estimatedValue: string;
+  notes: string;
+};
+
+const initialForm: ProspectFormData = {
+  firstName: '',
+  lastName: '',
+  company: '',
+  email: '',
+  phone: '',
+  jobTitle: '',
+  industry: '',
+  region: '',
+  website: '',
+  source: 'OTHER',
+  status: 'NEW',
+  estimatedValue: '',
+  notes: '',
+};
+
+export default function ProspectFormModal({
+  businessId,
+  prospect,
+  onClose,
+  onSaved,
+}: ProspectFormModalProps) {
+  const isEditing = Boolean(prospect);
+
+  const [form, setForm] = useState<ProspectFormData>(initialForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const set = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  useEffect(() => {
+    if (!prospect) {
+      setForm(initialForm);
+      return;
+    }
 
-  async function submit(e: FormEvent) {
+    setForm({
+      firstName: prospect.firstName ?? '',
+      lastName: prospect.lastName ?? '',
+      company: prospect.company ?? '',
+      email: prospect.email ?? '',
+      phone: prospect.phone ?? '',
+      jobTitle: prospect.jobTitle ?? '',
+      industry: prospect.industry ?? '',
+      region: prospect.region ?? '',
+      website: prospect.website ?? '',
+      source: prospect.source || 'OTHER',
+      status: prospect.status ?? 'NEW',
+      estimatedValue:
+        prospect.estimatedValue != null
+          ? String(prospect.estimatedValue)
+          : '',
+      notes: prospect.notes ?? '',
+    });
+  }, [prospect]);
+
+  function updateField<K extends keyof ProspectFormData>(
+    field: K,
+    value: ProspectFormData[K],
+  ) {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    const estimatedValue =
+      form.estimatedValue.trim() === ''
+        ? null
+        : Number(form.estimatedValue);
+
+    if (
+      estimatedValue !== null &&
+      (!Number.isFinite(estimatedValue) || estimatedValue < 0)
+    ) {
+      setError('Le budget estimé doit être un nombre positif.');
+      setLoading(false);
+      return;
+    }
+
+    const body = {
+      contactName: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+      companyName: form.company.trim(),
+      email: form.email.trim() || undefined,
+      phone: form.phone.trim() || undefined,
+      jobTitle: form.jobTitle.trim() || undefined,
+      industry: form.industry.trim() || undefined,
+      region: form.region.trim() || undefined,
+      website: form.website.trim() || undefined,
+      source: form.source,
+      status: form.status,
+      estimatedValue:
+        form.estimatedValue.trim() === ''
+          ? undefined
+          : Number(form.estimatedValue),
+      notes: form.notes.trim() || undefined,
+    };
     try {
-      const body: Record<string, unknown> = { ...form };
-      body.estimatedBudget = form.estimatedBudget === '' ? (prospect ? null : undefined) : Number(form.estimatedBudget);
-      // On edit, send empty optional strings so a field can be cleared.
-      if (!prospect) for (const k of ['phone', 'sector', 'source']) if (body[k] === '') delete body[k];
-      const saved = prospect
-        ? await api<Prospect>(`businesses/${businessId}/prospects/${prospect.id}`, { method: 'PATCH', body })
-        : await api<Prospect>(`businesses/${businessId}/prospects`, { method: 'POST', body });
+      const url = prospect
+        ? `businesses/${businessId}/prospects/${prospect.id}`
+        : `businesses/${businessId}/prospects`;
+
+      const saved = await api<Prospect>(url, {
+        method: prospect ? 'PATCH' : 'POST',
+        body: JSON.stringify(body),
+      });
+
       onSaved(saved);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Impossible d’enregistrer le prospect.',
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Modal wide title={prospect ? 'Modifier le prospect' : 'Nouveau prospect'}
-      subtitle="Renseignez les informations du contact et de son entreprise." onClose={onClose}>
+    <Modal
+      title={isEditing ? 'Modifier le prospect' : 'Nouveau prospect'}
+      onClose={onClose}
+    >
       <form onSubmit={submit}>
-        <div className="grid gap-5 px-7 py-6 sm:grid-cols-2">
-          <Field label="Nom du contact *">
-            <input name="contactName" required minLength={2} value={form.contactName} onChange={set} className={inputClass} placeholder="Ex : Sami Ben Ali" />
-          </Field>
+        <div className="max-h-[70vh] space-y-5 overflow-y-auto px-7 py-6">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Prénom *">
+              <input
+                required
+                value={form.firstName}
+                onChange={(e) => updateField('firstName', e.target.value)}
+                className={inputClass}
+                placeholder="Prénom"
+              />
+            </Field>
+
+            <Field label="Nom *">
+              <input
+                required
+                value={form.lastName}
+                onChange={(e) => updateField('lastName', e.target.value)}
+                className={inputClass}
+                placeholder="Nom"
+              />
+            </Field>
+          </div>
+
           <Field label="Entreprise *">
-            <input name="companyName" required minLength={2} value={form.companyName} onChange={set} className={inputClass} placeholder="Ex : Délice SARL" />
+            <input
+              required
+              value={form.company}
+              onChange={(e) => updateField('company', e.target.value)}
+              className={inputClass}
+              placeholder="Nom de l'entreprise"
+            />
           </Field>
-          <Field label="Email *">
-            <input type="email" name="email" required value={form.email} onChange={set} className={inputClass} placeholder="contact@delice.tn" />
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Email">
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => updateField('email', e.target.value)}
+                className={inputClass}
+                placeholder="contact@entreprise.tn"
+              />
+            </Field>
+
+            <Field label="Téléphone">
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => updateField('phone', e.target.value)}
+                className={inputClass}
+                placeholder="+216 ..."
+              />
+            </Field>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Poste">
+              <input
+                value={form.jobTitle}
+                onChange={(e) => updateField('jobTitle', e.target.value)}
+                className={inputClass}
+                placeholder="Directeur commercial..."
+              />
+            </Field>
+
+            <Field label="Secteur d'activité">
+              <input
+                value={form.industry}
+                onChange={(e) => updateField('industry', e.target.value)}
+                className={inputClass}
+                placeholder="Informatique, industrie..."
+              />
+            </Field>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Région">
+              <input
+                value={form.region}
+                onChange={(e) => updateField('region', e.target.value)}
+                className={inputClass}
+                placeholder="Tunis, Sfax..."
+              />
+            </Field>
+
+            <Field label="Site web">
+              <input
+                type="url"
+                value={form.website}
+                onChange={(e) => updateField('website', e.target.value)}
+                className={inputClass}
+                placeholder="https://..."
+              />
+            </Field>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Source">
+              <select
+                value={form.source}
+                onChange={(e) => updateField('source', e.target.value)}
+                className={inputClass}
+              >
+                <option value="WEBSITE">Site web</option>
+                <option value="FACEBOOK">Facebook</option>
+                <option value="LINKEDIN">LinkedIn</option>
+                <option value="REFERRAL">Recommandation</option>
+                <option value="OTHER">Autre</option>
+              </select>
+            </Field>
+
+            <Field label="Statut">
+              <select
+                value={form.status}
+                onChange={(e) =>
+                  updateField('status', e.target.value as ProspectStatus)
+                }
+                className={inputClass}
+              >
+                {STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {STATUS_CONFIG[status].label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <Field label="Budget estimé">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.estimatedValue}
+              onChange={(e) =>
+                updateField('estimatedValue', e.target.value)
+              }
+              className={inputClass}
+              placeholder="0.00"
+            />
           </Field>
-          <Field label="Téléphone">
-            <input name="phone" value={form.phone} onChange={set} className={inputClass} placeholder="+216 XX XXX XXX" />
+
+          <Field label="Notes">
+            <textarea
+              rows={4}
+              value={form.notes}
+              onChange={(e) => updateField('notes', e.target.value)}
+              className={`${inputClass} resize-none`}
+              placeholder="Informations complémentaires..."
+            />
           </Field>
-          <Field label="Secteur d'activité">
-            <input name="sector" value={form.sector} onChange={set} className={inputClass} placeholder="Ex : Agroalimentaire" />
-          </Field>
-          <Field label="Source du prospect">
-            <input name="source" value={form.source} onChange={set} className={inputClass} placeholder="Ex : LinkedIn, salon, recommandation" />
-          </Field>
-          <Field label="Budget estimé (TND)">
-            <input type="number" min={0} step="any" name="estimatedBudget" value={form.estimatedBudget} onChange={set} className={inputClass} placeholder="0" />
-          </Field>
-          <Field label="Statut">
-            <select name="status" value={form.status} onChange={set} className={inputClass}>
-              {STATUSES.map((s) => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
-            </select>
-          </Field>
-          <div className="sm:col-span-2"><ErrorBox message={error} /></div>
+
+          <ErrorBox message={error} />
         </div>
+
         <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/50 px-7 py-4">
-          <button type="button" onClick={onClose} disabled={loading} className={btnSecondary}>Annuler</button>
-          <button type="submit" disabled={loading} className={btnPrimary}>
-            {loading ? 'Enregistrement...' : prospect ? 'Enregistrer' : 'Ajouter le prospect'}
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className={btnSecondary}
+          >
+            Annuler
+          </button>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={btnPrimary}
+          >
+            {loading
+              ? 'Enregistrement...'
+              : isEditing
+                ? 'Enregistrer les modifications'
+                : 'Créer le prospect'}
           </button>
         </div>
       </form>

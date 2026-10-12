@@ -57,7 +57,7 @@ export default function ProspectsPage({ params, searchParams }: { params: { id: 
     const prev = result;
     setResult((r) => r && { ...r, data: r.data.map((x) => (x.id === p.id ? { ...x, status: next } : x)) });
     try {
-      await api(`businesses/${businessId}/prospects/${p.id}`, { method: 'PATCH', body: { status: next } });
+      await api(`businesses/${businessId}/prospects/${p.id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
       if (status && status !== next) load();
     } catch (e: any) {
       setResult(prev);
@@ -138,12 +138,12 @@ export default function ProspectsPage({ params, searchParams }: { params: { id: 
                 {result.data.map((p) => (
                   <tr key={p.id} className="transition hover:bg-slate-50/60">
                     <td className="px-5 py-3.5">
-                      <Link href={`/business/${businessId}/prospects/${p.id}`} className="font-semibold text-slate-900 hover:text-indigo-600">{p.contactName}</Link>
+                      <Link href={`/business/${businessId}/prospects/${p.id}`} className="font-semibold text-slate-900 hover:text-indigo-600">{p.company}</Link>
                       <p className="text-xs text-slate-500">{p.email}</p>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-700">{p.companyName}</td>
-                    <td className="px-5 py-3.5 text-slate-500">{p.sector || '—'}</td>
-                    <td className="px-5 py-3.5 text-slate-700">{formatMoney(p.estimatedBudget)}</td>
+                    <td className="px-5 py-3.5 text-slate-700">{p.company}</td>
+                    <td className="px-5 py-3.5 text-slate-500">{p.region || '—'}</td>
+                    <td className="px-5 py-3.5 text-slate-700">{formatMoney(p.estimatedValue)}</td>
                     <td className="px-5 py-3.5">
                       <select value={p.status} onChange={(e) => changeStatus(p, e.target.value as ProspectStatus)} aria-label="Changer le statut"
                         className={`cursor-pointer rounded-full border-0 py-1 pl-2.5 pr-7 text-xs font-semibold ring-1 ring-inset focus:ring-2 ${STATUS_CONFIG[p.status].badge}`}>
@@ -181,7 +181,7 @@ export default function ProspectsPage({ params, searchParams }: { params: { id: 
       )}
       {toDelete && (
         <ConfirmDialog title="Supprimer ce prospect ?" loading={deleting} error={deleteError} onConfirm={confirmDelete} onClose={() => setToDelete(null)}
-          message={<>Le prospect <strong>{toDelete.contactName}</strong> ({toDelete.companyName}) et toutes ses interactions seront définitivement supprimés.</>} />
+          message={<>Le prospect <strong>{toDelete.company}</strong> ({toDelete.company}) et toutes ses interactions seront définitivement supprimés.</>} />
       )}
     </div>
   );

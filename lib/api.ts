@@ -1,30 +1,19 @@
-'use client';
-
-export class ApiError extends Error {
-  constructor(message: string, public status: number) {
-    super(message);
-  }
-}
-
-/** Browser-side call to the NestJS API through the authenticated Next.js proxy. */
-export async function api<T = any>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+/** Client-side helper: all calls go through the Next.js proxy route (cookie → Bearer token). */
+export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`/api/proxy/${path.replace(/^\//, '')}`, {
-    method: init.method || 'GET',
-    headers: init.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-    body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
-    cache: 'no-store',
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
   });
-
   if (res.status === 401 && typeof window !== 'undefined') {
     window.location.href = '/login';
-    throw new ApiError('Session expirée', 401);
+    throw new Error('Session expirée');
   }
-
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  const data = await res.json().catch(() => null);
   if (!res.ok) {
     const msg = Array.isArray(data?.message) ? data.message.join(', ') : data?.message;
-    throw new ApiError(msg || 'Une erreur est survenue', res.status);
+    throw new Error(msg ?? `Erreur ${res.status}`);
   }
   return data as T;
 }
+
+export const json = (method: string, body?: unknown): RequestInit => ({ method, body: body === undefined ? undefined : JSON.stringify(body) });

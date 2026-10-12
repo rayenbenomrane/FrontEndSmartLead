@@ -1,6 +1,6 @@
 export type BusinessRole = 'OWNER' | 'ADMIN' | 'MEMBER';
 export type ProspectStatus = 'NEW' | 'CONTACTED' | 'NEGOTIATION' | 'PROPOSAL_SENT' | 'WON' | 'LOST';
-export type InteractionType = 'EMAIL' | 'MEETING' | 'NOTE';
+export type InteractionType = 'EMAIL' | 'REUNION' | 'NOTE';
 
 export const STATUS_CONFIG: Record<ProspectStatus, { label: string; badge: string; dot: string }> = {
   NEW: { label: 'Nouveau', badge: 'bg-slate-100 text-slate-700 ring-slate-500/10', dot: 'bg-slate-400' },
@@ -14,7 +14,7 @@ export const STATUSES = Object.keys(STATUS_CONFIG) as ProspectStatus[];
 
 export const INTERACTION_CONFIG: Record<InteractionType, { label: string; icon: string; badge: string }> = {
   EMAIL: { label: 'Email', icon: '✉', badge: 'bg-sky-50 text-sky-700' },
-  MEETING: { label: 'Réunion', icon: '📅', badge: 'bg-violet-50 text-violet-700' },
+  REUNION: { label: 'Reunion', icon: '📅', badge: 'bg-violet-50 text-violet-700' },
   NOTE: { label: 'Note', icon: '📝', badge: 'bg-amber-50 text-amber-700' },
 };
 
@@ -27,18 +27,22 @@ export const ROLE_CONFIG: Record<BusinessRole, { label: string; className: strin
 export type Prospect = {
   id: string;
   businessId: string;
-  contactName: string;
-  companyName: string;
-  email: string;
+  firstName: string;
+  lastName: string;
+  company: string;
+  email: string | null;
   phone: string | null;
-  sector: string | null;
-  source: string | null;
-  estimatedBudget: number | null;
+  jobTitle: string | null;
+  industry: string | null;
+  region: string | null;
+  website: string | null;
+  source: string;
+  estimatedValue: number | null;
   status: ProspectStatus;
+  notes: string | null;
   createdAt: string;
   updatedAt: string;
 };
-
 export type Interaction = {
   id: string;
   prospectId: string;

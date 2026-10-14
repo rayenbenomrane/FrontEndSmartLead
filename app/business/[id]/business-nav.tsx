@@ -10,7 +10,7 @@ export default function BusinessNav({ businessId, role }: { businessId: string; 
   const tabs = [
     { href: base, label: "Vue d'ensemble", exact: true },
     { href: `${base}/prospects`, label: 'Prospects' },
-    { href: `${base}/team`, label: 'Équipe' },
+
     ...(role !== 'MEMBER' ? [{ href: `${base}/settings`, label: 'Paramètres' }] : []),
   ];
 
@@ -21,9 +21,8 @@ export default function BusinessNav({ businessId, role }: { businessId: string; 
           const active = t.exact ? pathname === t.href : pathname.startsWith(t.href);
           return (
             <Link key={t.href} href={t.href}
-              className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition ${
-                active ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}>
+              className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition ${active ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}>
               {t.label}
             </Link>
           );
